@@ -1,0 +1,1 @@
+python font2img.py --src_font=kaiti_GB18030.ttf --dst_font=kaiti_GB18030.ttf --charset=CN --x_offset 128 --y_offset 128 --sample_count=100 --sample_dir=samples --label=0 --filter=1 --shuffle=0
