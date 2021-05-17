@@ -81,7 +81,7 @@ def font2img(src, dst, charset, char_size, canvas_size,
             break
         e = draw_example(c, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes)
         if e:
-            e.save(os.path.join(sample_dir, "%d_%04d.jpg" % (label, count)))
+            e.save(os.path.join(sample_dir, "%d.jpg" % (ord(c))))
             count += 1
             if count % 100 == 0:
                 print("processed %d chars" % count)
@@ -108,6 +108,7 @@ args = parser.parse_args()
 if __name__ == "__main__":
     if args.charset in ['CN', 'JP', 'KR', 'CN_T']:
         charset = locals().get("%s_CHARSET" % args.charset)
+        # breakpoint()
     else:
         charset = [c for c in open(args.charset).readline()[:-1].decode("utf-8")]
     if args.shuffle:
