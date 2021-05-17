@@ -16,6 +16,7 @@ import json
 import collections
 
 from scipy.stats import multivariate_normal
+import matplotlib as mpl
 
 
 
@@ -88,19 +89,41 @@ def em_mix(data, n_components, mu, eps=None):
         eps = min(1e-3, 1/(data.shape[0]*100))
 
     #  initial params
-    total_cov = np.cov(data.transpose())
-    e, _ = np.linalg.eig(total_cov)
-    C = np.median(e) * np.eye(data.shape[1])
+    # total_cov = np.cov(data.transpose())
+    # e, _ = np.linalg.eig(total_cov)
+    # C = np.median(e) * np.eye(data.shape[1])
+    C = np.eye(2) * 20
     sigma = np.concatenate([[C]] * n_components, axis=0)
     prior = np.concatenate([[1/n_components]] * n_components, axis=0)
 
     cont_flag = 1
     log_likelihood = 0
     # while cont_flag:
-    for _ in range(10):
-        sigma_new = one_EM_iteration(data, n_components, mu, sigma, prior)
-        print(np.linalg.norm(sigma_new - sigma_new))
+    for em_iter in range(30):
+
+        plt.figure(figsize=(5, 5))
+        ax = plt.gca()
+        canvas_size = 360
+        plt.xlim(0, canvas_size)
+        plt.ylim(0, canvas_size)
+        ax.set_xticks(np.arange(0, canvas_size, 50))
+        ax.set_yticks(np.arange(0, canvas_size, 50))
+        ax.set_xticklabels(np.arange(0, canvas_size, 50))
+        ax.set_yticklabels(np.arange(0, canvas_size, 50))
+        ax.invert_yaxis()
+        plt.tick_params(top=True, bottom=False, left=True, right=False)
+        plt.tick_params(labeltop=True, labelleft=True, labelright=False, labelbottom=False)
+        plt.grid()
+
+        plt.scatter(mu[:, 0], mu[:, 1], s=5)
+        plt.scatter(data[:, 0], data[:, 1], s=0.5)
+        for k in range(mu.shape[0]):
+            make_ellipses(mean=mu[k], cov=sigma[k], ax=ax, alpha=0.1)
+        plt.savefig(f'./extract_stroke/em_dynamic_fig/fig{em_iter}.jpg')
+
+        sigma_new, prior_new = one_EM_iteration(data, n_components, mu, sigma, prior)
         sigma = sigma_new
+        prior = prior_new
 
 
 def one_EM_iteration(data, n_components, mu, sigma, prior):
@@ -119,7 +142,13 @@ def one_EM_iteration(data, n_components, mu, sigma, prior):
         sigma_tmp = np.reshape(sigma_tmp.transpose(), (N, d, d))
         sigma_new[i] = np.sum(sigma_tmp, axis=0)
         sigma_new[i] = sigma_new[i] / np.sum(post_prob[:,i])
-    return sigma_new
+        sigma_new[i] = 0.5 * sigma_new[i] + 0.5 * 20 *np.eye(2)
+    
+    prior_new = np.zeros(n_components)
+    for i in range(n_components):
+        prior_new[i] = np.sum(post_prob[:, i]) / N
+
+    return sigma_new, prior_new
 
 
 def post_prob_one_data(n_components, data, mu, sigma, prior):
@@ -129,10 +158,10 @@ def post_prob_one_data(n_components, data, mu, sigma, prior):
     return pdf / np.sum(pdf)
 
 
-def _get_pixel_coordinates(data_idx):
+def _get_pixel_coordinates(data_idx, canvas_size):
     c = chr(data_idx)
     font_dir = "./scatter_mat/SIMKAI.TTF"
-    canvas_size = 360
+    
     font = ImageFont.truetype(font_dir, size=canvas_size)
 
     font_array= get_font_array(
@@ -146,7 +175,7 @@ def _get_pixel_coordinates(data_idx):
 
     pixel_x, pixel_y = font_img_2_xy(font_array)
 
-    return pixel_x, pixel_y, font_lim_left, font_lim_right, font_lim_top, font_lim_bottom, canvas_size
+    return pixel_x, pixel_y, font_lim_left, font_lim_right, font_lim_top, font_lim_bottom
 
 
 def _get_mu_n(data_idx, font_lim_left, font_lim_right, font_lim_top, font_lim_bottom):
@@ -197,21 +226,70 @@ def _get_mu_n(data_idx, font_lim_left, font_lim_right, font_lim_top, font_lim_bo
     return mu, n_components
 
 
+def make_ellipses(mean, cov, ax, confidence=5.991, alpha=0.3, color="blue", eigv=False, arrow_color_list=None):
+    """
+    多元正态分布
+    mean: 均值
+    cov: 协方差矩阵
+    ax: 画布的Axes对象
+    confidence: 置信椭圆置信率 # 置信区间， 95%： 5.991  99%： 9.21  90%： 4.605 
+    alpha: 椭圆透明度
+    eigv: 是否画特征向量
+    arrow_color_list: 箭头颜色列表
+    """
+    lambda_, v = np.linalg.eig(cov)    # 计算特征值lambda_和特征向量v
+    # print "lambda: ", lambda_
+    # print "v: ", v
+    # print "v[0, 0]: ", v[0, 0]
+
+    sqrt_lambda = np.sqrt(np.abs(lambda_))    # 存在负的特征值， 无法开方，取绝对值
+
+    s = confidence
+    width = 2 * np.sqrt(s) * sqrt_lambda[0]    # 计算椭圆的两倍长轴
+    height = 2 * np.sqrt(s) * sqrt_lambda[1]   # 计算椭圆的两倍短轴
+    angle = np.rad2deg(np.arccos(v[0, 0]))    # 计算椭圆的旋转角度
+    ell = mpl.patches.Ellipse(xy=mean, width=width, height=height, angle=angle, color=color)    # 绘制椭圆
+
+    ax.add_artist(ell)
+    ell.set_alpha(alpha)
+
 
 def main():
-    data_idx = 19980
-    for data_idx in range(19980, 19980 + 1):
-        plt.figure(figsize=(4, 4))
-        ax = plt.gca()
+    data_idx_start = 19981
+    for data_idx in range(data_idx_start, data_idx_start + 1):
+
         #####################################
-        #  downwards  get pixel coordinates #
+        #  plt config                       #
         #####################################
 
-        pixel_x, pixel_y, font_lim_left, font_lim_right, font_lim_top, font_lim_bottom, canvas_size = _get_pixel_coordinates(data_idx)
+        # plt.figure(figsize=(15, 15))
+        # ax = plt.gca()
+        canvas_size = 360
+        # plt.xlim(0, canvas_size)
+        # plt.ylim(0, canvas_size)
+        # ax.set_xticks(np.arange(0, canvas_size, 50))
+        # ax.set_yticks(np.arange(0, canvas_size, 50))
+        # ax.set_xticklabels(np.arange(0, canvas_size, 50))
+        # ax.set_yticklabels(np.arange(0, canvas_size, 50))
+        # ax.invert_yaxis()
+        # plt.tick_params(top=True, bottom=False, left=True, right=False)
+        # plt.tick_params(labeltop=True, labelleft=True, labelright=False, labelbottom=False)
+        # plt.grid()
 
-        plt.scatter(pixel_x, pixel_y)
-        plt.savefig(f'./extract_stroke/fig.jpg')
-        breakpoint()
+        #####################################
+        #  get pixel coordinates            #
+        #####################################
+
+        pixel_full_x, pixel_full_y, font_lim_left, font_lim_right, font_lim_top, font_lim_bottom = _get_pixel_coordinates(data_idx, canvas_size)
+        sparse_index = np.random.choice(np.arange(pixel_full_x.shape[0]), size=int(pixel_full_x.shape[0]/25),)
+        sparse_index = np.sort(sparse_index)
+        pixel_x = pixel_full_x[sparse_index]
+        pixel_y = pixel_full_y[sparse_index]
+        # pixel_x = get_sparce_points(pixel_x, step_size=20)
+        # pixel_y = get_sparce_points(pixel_y, step_size=20)
+        # plt.scatter(pixel_x, pixel_y, s=0.5)
+        # plt.savefig(f'./extract_stroke/fig.jpg')
+
         
 
         #####################################
@@ -219,31 +297,18 @@ def main():
         #           get mu, n_components    #
         #####################################
         mu, n_components = _get_mu_n(data_idx, font_lim_left, font_lim_right, font_lim_top, font_lim_bottom)
+        # plt.scatter(mu[:, 0], mu[:, 1], s=2)
+        # for k in range(53):
+        #     make_ellipses(mean=mu[k], cov=[[10, 0], [0, 10]], ax=ax, alpha=0.1)
+        # plt.savefig(f'./extract_stroke/fig.jpg')
+        # breakpoint()
 
-
-        #####################################
-        #  downwards     plot configs       #
-        #####################################
-        plt.xlim(0, canvas_size)
-        plt.ylim(0, canvas_size)
-        ax.set_xticks(np.arange(0, canvas_size, 50))
-        ax.set_yticks(np.arange(0, canvas_size, 50))
-        ax.set_xticklabels(np.arange(0, canvas_size, 50))
-        ax.set_yticklabels(np.arange(0, canvas_size, 50))
-        ax.invert_yaxis()
-        plt.tick_params(top=True, bottom=False, left=True, right=False)
-        plt.tick_params(labeltop=True, labelleft=True, labelright=False, labelbottom=False)
-        plt.grid()
-        # plt.savefig(f'./extract_stroke/{data_idx}font.jpg')
 
 
         #####################################
         #  downwards           EM           #
         #####################################
-        pixel_x = get_sparce_points(pixel_x, step_size=100)
-        pixel_y = get_sparce_points(pixel_y, step_size=100)
-        plt.scatter(pixel_x, pixel_y)
-        plt.savefig(f'./extract_stroke/fig.jpg')
+
         data_em = np.concatenate(
             (np.expand_dims(pixel_x, 1), np.expand_dims(pixel_y, 1)),
             axis=1
