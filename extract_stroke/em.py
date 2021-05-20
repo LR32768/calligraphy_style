@@ -126,7 +126,7 @@ def em_mix(data, n_components, mu, eps=None):
         sigma_new, prior_new = one_EM_iteration(data, n_components, mu, sigma, prior)
         sigma = sigma_new
         prior = prior_new
-    return sigma
+    return sigma, prior
 
 
 def one_EM_iteration(data, n_components, mu, sigma, prior):
@@ -269,41 +269,62 @@ def make_ellipses(mean, cov, ax, confidence=5.991, alpha=0.3, color="blue", eigv
     ell.set_alpha(alpha)
 
 
-def get_stroke_points(pixel_full_x, pixel_full_y, n_components, n_stroke, mu, mu_class_idx, sigma):
+def get_stroke_points(pixel_full_x, pixel_full_y, n_components, n_stroke, mu, mu_class_idx, sigma, prior):
     data_all = np.concatenate(
         (np.expand_dims(pixel_full_x, 1), np.expand_dims(pixel_full_y, 1)),
         axis=1
         )
 
-    data_each_stroke = [[], [], [], []]
+    data_each_stroke = []
+    for _ in range(n_stroke):
+        data_each_stroke.append([])
+
     for idx_data, data in enumerate(data_all):
-        exponent = np.expand_dims(data-mu, 1)  # (n_components, 1, 2)
+        exponent = np.expand_dims(data - mu, 1)  # (n_components, 1, 2)
         exponent = np.einsum("ijk, ikl -> ijl" , exponent, np.linalg.inv(sigma))  # (n_components, 1, 2)
-        exponent = np.einsum("ijk, ikl -> ijl" , exponent, np.expand_dims(data-mu, 2))  # (n_components, 1, 1)
+        exponent = np.einsum("ijk, ikl -> ijl" , exponent, np.expand_dims(data - mu, 2))  # (n_components, 1, 1)
         exponent = np.squeeze(exponent)  # (n_components,)
         exponent = (-0.5) * exponent
-        softmax_out = scipy.special.softmax(exponent)
+        # softmax_out = scipy.special.softmax(exponent)
+        softmax_out = np.exp(exponent)
         pdf = np.divide(
             softmax_out,
             np.sqrt(4 * np.pi * np.pi * np.linalg.det(sigma))
         )
+        breakpoint()
+        pdf = np.multiply(pdf, prior)
+        pdf = pdf / np.sum(pdf)
+        breakpoint()
+
+        
         topk_indices = pdf.argsort()[-2:][::-1]  # top 2 probability
+        
         # breakpoint()
         for topk_index in topk_indices:
-            # if pdf[topk_index] > 0.2:
-            # breakpoint()
-            if topk_index in mu_class_idx[0]:
-                data_each_stroke[0].append(np.ndarray.tolist(data))
-            elif topk_index in mu_class_idx[1]:
-                data_each_stroke[1].append(np.ndarray.tolist(data))
-            elif topk_index in mu_class_idx[2]:
-                data_each_stroke[2].append(np.ndarray.tolist(data))
-            elif topk_index in mu_class_idx[3]:
-                data_each_stroke[3].append(np.ndarray.tolist(data))
-    data_each_stroke[0] = np.array(data_each_stroke[0])
-    data_each_stroke[1] = np.array(data_each_stroke[1])
-    data_each_stroke[2] = np.array(data_each_stroke[2])
-    data_each_stroke[3] = np.array(data_each_stroke[3])
+            # # TODO: for dynamic length len(mu_class_idx)
+            # if topk_index in mu_class_idx[0]:
+            #     data_each_stroke[0].append(np.ndarray.tolist(data))
+            # elif topk_index in mu_class_idx[1]:
+            #     data_each_stroke[1].append(np.ndarray.tolist(data))
+            # elif topk_index in mu_class_idx[2]:
+            #     data_each_stroke[2].append(np.ndarray.tolist(data))
+            # elif topk_index in mu_class_idx[3]:
+            #     data_each_stroke[3].append(np.ndarray.tolist(data))
+            for idx_stroke, mu_class_sub_idx in enumerate(mu_class_idx):
+                topk_index = topk_index - len(mu_class_sub_idx)
+                if topk_index < 0:
+                    data_each_stroke[idx_stroke].append(np.ndarray.tolist(data))
+                    break
+            """"""
+    
+    for idx_stroke in range(n_stroke):
+        data_each_stroke[idx_stroke] = np.array(
+            np.unique(
+                data_each_stroke[idx_stroke],
+                axis=0,
+            )
+        )
+
     return data_each_stroke
 
 
@@ -312,7 +333,7 @@ def get_stroke_points(pixel_full_x, pixel_full_y, n_components, n_stroke, mu, mu
 
 
 def main():
-    data_idx_start = 19981
+    data_idx_start = 19988
     for data_idx in range(data_idx_start, data_idx_start + 1):
 
         #####################################
@@ -370,16 +391,17 @@ def main():
             (np.expand_dims(pixel_x, 1), np.expand_dims(pixel_y, 1)),
             axis=1
             )
-        sigma = em_mix(data=data_em, n_components=n_components, mu=mu, eps=None)
+        sigma, prior = em_mix(data=data_em, n_components=n_components, mu=mu, eps=None)
 
-        stroke_points = get_stroke_points(pixel_full_x, pixel_full_y, n_components, n_stroke, mu, mu_class_idx, sigma)
+        stroke_points = get_stroke_points(pixel_full_x, pixel_full_y, n_components, n_stroke, mu, mu_class_idx, sigma, prior)
 
         # breakpoint()
         # plt.scatter(stroke_points[0][:, 0], stroke_points[0][:, 1], s=2, c='b')
         # plt.scatter(stroke_points[1][:, 0], stroke_points[1][:, 1], s=2, c='g')
         # plt.scatter(stroke_points[2][:, 0], stroke_points[2][:, 1], s=2, c='r')
-        plt.scatter(stroke_points[3][:, 0], stroke_points[3][:, 1], s=2, c='m')
-        plt.savefig(f'./extract_stroke/em_dynamic_fig/siged_full44.jpg')
+        # plt.scatter(stroke_points[3][:, 0], stroke_points[3][:, 1], s=2, c='m')
+        plt.scatter(stroke_points[4][:, 0], stroke_points[4][:, 1], s=2, c='c')
+        plt.savefig(f'./extract_stroke/em_dynamic_fig/siged_full55.jpg')
 
 
 if __name__ == "__main__":
