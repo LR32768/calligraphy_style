@@ -17,6 +17,8 @@ How to get the strokes of these characters is one of our contribution in this pr
 
 Because generating these data consumes huge amount of time and computation (3 * AMD Ryzen Threadripper 2990WX CPU for ~10 hours), we suggest to run the demo code which only generate small amount of data. We also give the TsinghuaCloud link for the whole dataset for you guys to download.
 
+### Get annotated KAITI stroke skeleton
+
 ### Get training dataset
 
 (suggest) generate small amount of data

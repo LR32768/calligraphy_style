@@ -24,7 +24,7 @@ def plot_ellipses(mean, cov, ax, confidence=5.991, alpha=0.3, color="blue"):
 
     lambda_, v = np.linalg.eig(cov)    # 计算特征值和特征向量v
     sqrt_lambda = np.sqrt(np.abs(lambda_))    # 存在负的特征值， 无法开方，取绝对值
-    
+
     s = confidence
     width = 2 * np.sqrt(s) * sqrt_lambda[0]    # 计算椭圆的两倍长轴
     height = 2 * np.sqrt(s) * sqrt_lambda[1]   # 计算椭圆的两倍短轴
@@ -87,13 +87,10 @@ def get_pixel_coordinates(data_idx, canvas_size):
 
     c = chr(data_idx)
     """ 楷体 """
-    font_dir = "./scatter_mat/fangzheng_new_kaiti_GB18030.ttf"  # good
+    font_dir = "./data/fonts/KAITI.ttf"  # good
 
     """ 宋体 """
-    # font_dir = "./scatter_mat/SIMSUN.TTC"
-
-    """ 幼圆 """
-    # font_dir = "./scatter_mat/SIMYOU.TTF"
+    # font_dir = "./data/fonts/SIMFANG.TTF"
     
     font = ImageFont.truetype(font_dir, size=canvas_size)
 
@@ -113,7 +110,8 @@ def get_pixel_coordinates(data_idx, canvas_size):
 
 # get mu coordinates & related tools
 def get_mu_n(data_idx, mu_sparsity, font_lim_left, font_lim_right, font_lim_top, font_lim_bottom):
-    dataFile = f'./data_kai_GB18030/Font{data_idx}.mat'
+    # dataFile = f'/cluster/home/pyf/code/calligraphy_style/data_kai_GB18030/Font{data_idx}.mat'
+    dataFile = f'./data/KAITI_skeleton/Font{data_idx}.mat'
     data = scio.loadmat(dataFile)
 
     x_min = np.inf
@@ -295,7 +293,7 @@ def em_mix(data, n_components, mu_class_idx, n_stroke, mu, canvas_size):
         plt.scatter(data[:, 0], data[:, 1], s=0.5)
         for k in range(mu.shape[0]):
             plot_ellipses(mean=mu[k], cov=sigma[k], ax=ax, alpha=0.1)
-        # plt.savefig(f'./extract_stroke/em_dynamic_fig/fig{em_iter}.jpg')
+        plt.savefig(f'./example_results/strokes/process_of_extract_KAITI/process_EM/em_iter-{em_iter}.jpg')
         plt.close()
 
 
@@ -360,10 +358,10 @@ def plot_stroke(data_idx, stroke_points, n_stroke, canvas_size):
         y = stroke_points[idx_stroke][:, 1] - centroi_y + (canvas_size / 2)
 
         if idx_stroke == 0:
-            with open(f'./strokes/only_8/KAITI/unicode{data_idx}.csv', 'w') as f:
+            with open(f'./example_results/strokes/strokes_KAITI/KAITI_unicode{data_idx}.csv', 'w') as f:
                 f.write(f"{centroi_x/canvas_size:.4f},{centroi_y/canvas_size:.4f},\n")
         else:
-            with open(f'./strokes/only_8/KAITI/unicode{data_idx}.csv', 'a') as f:
+            with open(f'./example_results/strokes/strokes_KAITI/KAITI_unicode{data_idx}.csv', 'a') as f:
                 f.write(f"{centroi_x/canvas_size:.4f},{centroi_y/canvas_size:.4f},\n")
 
         plt.figure(figsize=(3.05, 3.075), facecolor='black')
@@ -375,14 +373,13 @@ def plot_stroke(data_idx, stroke_points, n_stroke, canvas_size):
         plt.scatter(x, y, s=2, c='white')
         
 
-        plt.savefig(f'./strokes/only_8/KAITI/unicode{data_idx}_stroke{idx_stroke}.jpg', bbox_inches='tight', dpi=100)
+        plt.savefig(f'./example_results/strokes/strokes_KAITI/KAITI_unicode{data_idx}_stroke{idx_stroke}.jpg', bbox_inches='tight', dpi=100)
 
 
 def main(args):
     data_idx_start = args.unicode
     data_idx_end = data_idx_start
     for data_idx in range(data_idx_start, data_idx_end + 1):
-
 
         # config
         canvas_size = 360
