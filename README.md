@@ -14,23 +14,23 @@ Ubuntu 18.04.5 LTS with cuda support
 
 ## File and Directory Explaination
 * ./checkpoints/  
-> > the path to save checkpoints  
+> the path to save checkpoints  
 * ./data/  
-> > font file, font skeleton dataset, and training testing dataset directory to be generated  
+> font file, font skeleton dataset, and training testing dataset directory to be generated  
 * ./example_results/  
-> > directory to save style transfer results  
+> directory to save style transfer results  
 * ./generate_data/  
-> > code to extract and plot strokes, plot characters  
+> code to extract and plot strokes, plot characters  
 * .gitignore  
-> > specifies intentionally untracked files to ignore  
+> specifies intentionally untracked files to ignore  
 * dataset.py  
-> > load the dataset  
+> load the dataset  
 * test_vae.py  
-> > testing code  
+> testing code  
 * train_vae.py  
-> > training code  
+> training code  
 * vqvae.py  
-> > model file  
+> model file  
 
 
 ## Get dataset
@@ -51,33 +51,33 @@ Because generating these data consumes huge amount of time and computation (3 * 
 python ./generate_data/extract_strokes/get_strokes_KAITI.py --unicode 13312
 python ./generate_data/plot_character/plot_font.py --unicode 13312 --font_style KAITI
 ```
-> the output picture will be saved in   
-> >     ./example_results/strokes/process_of_extract_KAITI  
-> >     ./example_results/strokes/strokes_KAITI  
-> >     ./example_results/whole_fonts/KAITI  
+the output picture will be saved in   
+>     ./example_results/strokes/process_of_extract_KAITI  
+>     ./example_results/strokes/strokes_KAITI  
+>     ./example_results/whole_fonts/KAITI  
 
 (suggest) generate small amount of target style data for visualize the effect of code
 ```
 python ./generate_data/extract_strokes/get_strokes_SONG.py --unicode 13312
 python ./generate_data/plot_character/plot_font.py --unicode 13312 --font_style SONG
 ```
-> the output picture will be saved in   
-> >     ./example_results/strokes/process_of_extract_SONG  
-> >     ./example_results/strokes/strokes_SONG  
-> >     ./example_results/whole_fonts/SONG  
+the output picture will be saved in   
+>     ./example_results/strokes/process_of_extract_SONG  
+>     ./example_results/strokes/strokes_SONG  
+>     ./example_results/whole_fonts/SONG  
 
 ## Training:  
 ```
 python train_vae.py --epoch 200
 ```
 * the output of training stroke data will be saved in 
-> > ./example_results/styletrans_out_training/  
+> ./example_results/styletrans_out_training/  
 * the checkpoints will be saved in 
-> > ./checkpoints  
+> ./checkpoints  
 
 ## Testing: transfer font style
 ```
 python test_vae.py --shift --weight_path ./checkpoints/KaiSong_size256_vqvae_200.pt
 ```
 * the output of testing font data will be saved in 
-> > ./example_results/styletrans_out_testing/  
+> ./example_results/styletrans_out_testing/  
