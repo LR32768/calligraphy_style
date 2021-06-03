@@ -11,7 +11,8 @@ from dataset import DCFontStroke
 
 from vqvae import VQVAE
 
-def train(epoch, loader, model, optimizer, scheduler, device):
+
+def train(epoch, loader, model, optimizer, scheduler, device, args):
     loader = tqdm(loader)
     criterion = nn.MSELoss()
 
@@ -32,10 +33,10 @@ def train(epoch, loader, model, optimizer, scheduler, device):
         loss = recon_loss + latent_loss_weight * latent_loss
         loss.backward()
 
+        optimizer.step()
+
         if scheduler is not None and i % 200 == 0:
             scheduler.step()
-
-        optimizer.step()
 
         part_mse_sum = recon_loss.item() * img.shape[0]
         part_mse_n = img.shape[0]
@@ -61,12 +62,13 @@ def train(epoch, loader, model, optimizer, scheduler, device):
             with torch.no_grad():
                 out, _ = model(sample)
 
+            
             utils.save_image(
                 torch.cat([tgt[:sample_size], out], 0),
-                f"stroke_VAE/visualize/{str(epoch + 1).zfill(5)}_{str(i).zfill(5)}.png",
+                f"{args.outpath}/{str(epoch + 1).zfill(5)}_{str(i).zfill(5)}.png",
                 nrow=sample_size,
                 normalize=True,
-                range=(-1, 1),
+                value_range=(-1, 1),
             )
 
             model.train()
@@ -74,6 +76,11 @@ def train(epoch, loader, model, optimizer, scheduler, device):
 
 def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if not os.path.exists(args.outpath):
+        os.system(f'mkdir -p {args.outpath}')
+    if not os.path.exists('./checkpoints'):
+        os.system(f'mkdir -p ./checkpoints')
+
 
     transform = transforms.Compose(
         [
@@ -82,7 +89,7 @@ def main(args):
         ]
     )
 
-    dataset = DCFontStroke(src_path = args.srcpath, tgt_path = args.tgtpath, transform=transform)
+    dataset = DCFontStroke(src_path=args.srcpath, tgt_path=args.tgtpath, transform=transform, shift=True)
     loader = DataLoader(
         dataset, batch_size=32, num_workers=2, shuffle=True
     )
@@ -98,20 +105,20 @@ def main(args):
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 3, eta_min=1e-5)
 
     for i in range(args.epoch):
-        train(i, loader, model, optimizer, lr_scheduler, device)
-        if i % 5 == 0:
-            torch.save(model.state_dict(), f"stroke_VAE/checkpoint/{args.font}_size{args.size}_vqvae_{str(i + 1).zfill(3)}.pt")
+        train(i, loader, model, optimizer, lr_scheduler, device, args)
+        if (i + 1) % 5 == 0:
+            torch.save(model.state_dict(), f"./checkpoints/{args.font}_size{args.size}_vqvae_{str(i + 1).zfill(3)}.pt")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", type=int, default=256)
-    parser.add_argument("--epoch", type=int, default=100)
+    parser.add_argument("--epoch", type=int, default=200)
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--sched", type=str, default="cycle")
-    parser.add_argument("--srcpath", type=str, default='./lesseq7/KAITI')
-    parser.add_argument("--tgtpath", type=str, default='./lesseq7/SONG')
-    parser.add_argument("--distributed", action="store_true")
+    parser.add_argument("--srcpath", type=str, default='./data/training_data/KAITI')
+    parser.add_argument("--tgtpath", type=str, default='./data/training_data/SONG')
+    parser.add_argument("--outpath", type=str, default='./example_results/styletrans_out_training')
     parser.add_argument("--model", type=str, default="VQVAE")
     parser.add_argument("--font", type=str, default='KaiSong')
     parser.add_argument("--resume_path", type=str, default="None")

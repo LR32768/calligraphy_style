@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import os
 import time
 import math
 import numpy as np
@@ -529,5 +530,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--unicode', type=int)
     args = parser.parse_args()
+
+    if not os.path.exists('./example_results/strokes/strokes_SONG'):
+        os.system('mkdir -p ./example_results/strokes/strokes_SONG')
+    if not os.path.exists('./example_results/strokes/process_of_extract_SONG/process_01_skeleton/'):
+        os.system('mkdir -p ./example_results/strokes/process_of_extract_SONG/process_01_skeleton/')
+    if not os.path.exists('./example_results/strokes/process_of_extract_SONG/process_02_segment'):
+        os.system('mkdir -p ./example_results/strokes/process_of_extract_SONG/process_02_segment')
 
     main(args)

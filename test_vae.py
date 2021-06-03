@@ -45,7 +45,7 @@ def main(args):
         ]
     )
 
-    dataset = DCFontStroke(src_path = args.srcpath, tgt_path = args.tgtpath, transform=transform, train=False, shift = args.shift)
+    dataset = DCFontStroke(src_path=args.srcpath, tgt_path=args.tgtpath, transform=transform, train=False, shift=args.shift)
 
     model = VQVAE().to(device)
     state_dict = torch.load(args.weight_path)
@@ -55,18 +55,15 @@ def main(args):
     with torch.no_grad():
         test(dataset, model, args.outpath, device)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", type=int, default=256)
-    parser.add_argument("--epoch", type=int, default=100)
-    parser.add_argument("--lr", type=float, default=5e-4)
-    parser.add_argument("--sched", type=str, default="cycle")
-    parser.add_argument("--srcpath", type=str, default='./lesseq7/KAITI')
-    parser.add_argument("--tgtpath", type=str, default='./lesseq7/SONG')
-    parser.add_argument("--outpath", type=str, default="./stroke_VAE/test_out")
-    parser.add_argument("--distributed", action="store_true")
+    parser.add_argument("--srcpath", type=str, default='./data/testing_data/KAITI')
+    parser.add_argument("--tgtpath", type=str, default='./data/testing_data/SONG')
+    parser.add_argument("--outpath", type=str, default='./example_results/styletrans_out_testing')
     parser.add_argument("--shift", action="store_true")
-    parser.add_argument("--weight_path", type=str, default="./stroke_VAE/checkpoint/KaiSong_size256_vqvae_101.pt")
+    parser.add_argument("--weight_path", type=str, default="./checkpoints/KaiSong_size256_vqvae_096.pt")
     args = parser.parse_args()
     print(args)
 
